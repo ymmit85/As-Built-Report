@@ -1,5 +1,17 @@
 # New-AsBuiltReport Changelog
 
+## [Unreleased]
+### Changed
+- Add "-Raw" paramter to get-content when importing report JSON data to fix a known issue
+
+## 0.3.0
+
+### What's New
+
+- This minor version contains a complete refactor of the project so that it is now an official PowerShell module.
+
+- We will now aim to host this module on PSGallery in the near future to allow for easier installation and usage.
+
 ## 0.2.0
 ### What's New
 - New As-Built JSON configuration structure

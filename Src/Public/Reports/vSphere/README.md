@@ -15,9 +15,11 @@ Each of these modules can be easily downloaded and installed via the PowerShell 
 
 Open a Windows PowerShell terminal window and install each of the required modules as follows;
 
-    install-module PScribo
+```powershell
+PS C:\> install-module PScribo
 
-    install-module VMware.PowerCLI
+PS C:\> install-module VMware.PowerCLI
+```
 
 ## Configuration
 The vSphere As Built report utilises a JSON file (vSphere.json) to allow configuration of report information, features and section detail. All report settings are configured via the JSON file.
@@ -118,7 +120,9 @@ The **VMHost** sub-schema is used to configure health checks for VMHosts.
 #### vSAN
 The **vSAN** sub-schema is used to configure health checks for vSAN.
 
-Currently there are no vSAN health checks defined.
+| Schema | Sub-Schema | Setting | Description | Highlight |
+| ------ | ---------- | ------- | ----------- | --------- |
+| vSAN | CapacityUtilization | true / false | Highlights vSAN datastores with storage capacity utilization over 75% | ![Warning](https://placehold.it/15/FFE860/000000?text=+) 75 - 90% utilized<br> ![Critical](https://placehold.it/15/FFB38F/000000?text=+) >90% utilized
 
 #### Datastore
 The **Datastore** sub-schema is used to configure health checks for Datastores.
@@ -143,68 +147,65 @@ The **VM** sub-schema is used to configure health checks for virtual machines.
 | ------ | ---------- | ------- | ----------- | --------- |
 | VM | PowerState | true / false | Enables/Disables checking the VM power state
 | VM | PowerStateSetting | PoweredOn / PoweredOff | Highlights virtual machines which do not match the specified VM power state | ![Warning](https://placehold.it/15/FFE860/000000?text=+) Highlights VMs which do not match the specified VM power state
+| VM | CpuHotAddEnabled | true / false | Enables/Disables checking the VM options for CPU Hot Add | ![Warning](https://placehold.it/15/FFE860/000000?text=+) Highlights VMs which have CPU Hot Add enabled
+| VM | CpuHotRemoveEnabled | true / false | Enables/Disables checking the VM options for CPU Hot Remove | ![Warning](https://placehold.it/15/FFE860/000000?text=+) Highlights VMs which have CPU Hot Remove enabled
+| VM | MemoryHotAddEnabled | true / false | Enables/Disables checking the VM options for Memory Hot Add | ![Warning](https://placehold.it/15/FFE860/000000?text=+) Highlights VMs which have Memory Hot Add enabled
+| VM | ChangeBlockTrackingEnabled | true / false | Enables/Disables checking if Change Block Tracking is enabled on the VM | ![Warning](https://placehold.it/15/FFE860/000000?text=+) Highlights VMs which do not have Change Block Tracking enabled
 | VM | VMTools | true / false | Highlights Virtual Machines which do not have VM Tools installed or are out of date | ![Warning](https://placehold.it/15/FFE860/000000?text=+) VM Tools not installed or out of date
 | VM | VMSnapshots | true / false | Highlights Virtual Machines which have snapshots older than 7 days | ![Warning](https://placehold.it/15/FFE860/000000?text=+) VM Snapshot age >= 7 days<br> ![Critical](https://placehold.it/15/FFB38F/000000?text=+) VM Snapshot age >= 14 days
-
-## Examples 
-- Generate HTML & Word reports with Timestamp
-Generate a vSphere As Built report for vCenter Server 'vcenter-01.corp.local' using specified credentials. Export report to HTML & DOC formats. Use default report style. Append timestamp to report filename. Save reports to 'C:\Users\Tim\Documents'
-
-    `.\New-AsBuilt-Report.ps1 -Target 'vcenter-01.corp.local' -Username 'administrator@vsphere.local' -Password 'VMware1!' -Type vSphere -Format Html,Word -Path 'C:\Users\Tim\Documents' -Timestamp`
-
-- Generate HTML & Text reports with Health Checks
-Generate a vSphere As Built report for vCenter Server 'vcenter-01.corp.local' using stored credentials. Export report to HTML & Text formats. Use default report style. Highlight environment issues within the report. Save reports to 'C:\Users\Tim\Documents'
-
-    `.\New-AsBuilt-Report.ps1 -Target 'vcenter-01.corp.local' -Credentials $Creds -Type vSphere -Format Html,Text -Path 'C:\Users\Tim\Documents' -Healthchecks`
-
-- Generate report with multiple vCenter Servers using Custom Style
-Generate a single vSphere As Built report for vCenter Servers 'vcenter-01.corp.local' and 'vcenter-02.corp.local' using specified credentials. Report exports to DOC format by default. Apply custom style to the report. Reports are saved to the script folder by default.
-
-    `.\New-AsBuilt-Report.ps1 -Target "vcenter-01.corp.local,vcenter-02.corp.local" -Username 'administrator@vsphere.local' -Password 'VMware1!' -Type vSphere -StyleName 'MyCustomStyle'`
-
-- Generate HTML & Word reports, attach and send reports via e-mail
-Generate a vSphere As Built report for vCenter Server 'vcenter-01.corp.local' using specified credentials. Export report to HTML & DOC formats. Use default report style. Reports are saved to the script folder by default. Attach and send reports via e-mail.
-
-    `.\New-AsBuilt-Report.ps1 -Target vcenter-01.corp.local -Username 'administrator@vsphere.local' -Password 'VMware1!' -Type vSphere -Format Html,Word -Path C:\Users\Tim\Documents -SendEmail`
 
 ## Samples
 ### Sample Report 1 - Default Style
 Sample vSphere As Built report with health checks, using default report style.
 
-![Sample vSphere Report 1](https://github.com/tpcarman/As-Built-Report/blob/dev/Reports/vSphere/Samples/Sample_vSphere_Report_1.png "Sample vSphere Report 1")
+![Sample vSphere Report 1](Src/Public/Reports/vSphere/Samples/Sample_vSphere_Report_1.png "Sample vSphere Report 1")
 
 
 ### Sample Report 2 - Custom Style
 Sample vSphere As Built report with health checks, using custom report style.
 
-![Sample vSphere Report 2](https://github.com/tpcarman/As-Built-Report/blob/dev/Reports/vSphere/Samples/Sample_vSphere_Report_2.png "Sample vSphere Report 2")
+![Sample vSphere Report 2](Src/Public/Reports/vSphere/Samples/Sample_vSphere_Report_2.png "Sample vSphere Report 2")
 
 # Release Notes
-## 0.2.1
-### What's New
+## [0.2.2] - 2018-09-19
+### Added
+- Added new VM health checks for CPU Hot Add/Remove, Memory Hot Add & Change Block Tracking
+
+### Changed
+- Improvements to VM reporting for Guest OS, CPU Hot Add/Remove, Memory Hot Add & Change Block Tracking
+- Minor updates to section paragraph text
+
+## [0.2.1] - 2018-08-21
+### Added
 - Added SDRS VM Overrides to Datastore Cluster section
+
+### Changed
 - SCSI LUN section rewritten to improve script performance
 - Fixed issues with current working directory paths
 - Changes to InfoLevel settings and definitions
 - Script formatting improvements to some sections to align with PowerShell best practice guidelines
-- vCenter Server SSL Certificate section removed temporarily 
 
-## 0.2.0
-### What's New
-- Requires PScribo module 0.7.24
+### Removed
+- vCenter Server SSL Certificate section removed temporarily   
+
+## [0.2.0] - 2018-08-13
+### Added
 - Added regions/endregions to all sections of script
-- Formatting improvements
 - Added Resource Pool summary information
 - Added vSAN summary information
 - Added vCenter Server mail settings health check
-- Datastore Clusters now has it's own dedicated section
 - Added DSCluster health checks
 - Added VM Power State health check
-- Renamed Storage section to Datastores
-- Renamed Storage health checks section to Datastore
 - Added support for NSX-V reporting
 
-### Known Issues
+### Changed
+- Requires PScribo module 0.7.24
+- Formatting improvements
+- Datastore Clusters now has it's own dedicated section
+- Renamed Storage section to Datastores
+- Renamed Storage health checks section to Datastore
+
+# Known Issues
 - Verbose script errors when connecting to vCenter with a Read-Only user account
 
 - In HTML documents, word-wrap of table cell contents is not working, causing the following issues;
