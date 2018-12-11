@@ -16,12 +16,13 @@ Each of these modules can be easily downloaded and installed via the PowerShell 
 ### Module Installation
 
 Open a Windows PowerShell terminal window and install each of the required modules as follows;
+```powershell
+PS C:\> install-module PScribo
 
-    install-module PScribo
+PS C:\> install-module VMware.PowerCLI
 
-    install-module VMware.PowerCLI
-
-    install-module PowerNSX
+PS C:\> install-module PowerNSX
+```
 
 ## Configuration
 VMware NSX-V reporting is confgigured via the JSON configuration file (vSphere.json) for the VMware vSphere As-Built Report.
@@ -35,5 +36,16 @@ The **InfoLevel** sub-schema allows configuration of each section of the report 
 | ------ | ---------- | --------------- | --------------|
 | InfoLevel | NSX | 0 | >= 1
 
-## Sample Report
-Below is an example of a vSphere As-Built report which includes NSX-V reporting.
+# Release Notes
+
+## [0.1.2] - 2018-09-19
+### Changed
+- Script formatting improvements 
+
+## [0.1.1] - 2018-09-14
+### Added
+- Add fix to correctly capture NAT rules on Edge Services Gateway applainces
+
+## [0.1.0] - 2018-08-29
+### Added
+- Initial Release
