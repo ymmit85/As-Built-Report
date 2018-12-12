@@ -23,8 +23,6 @@ function New-AsBuiltReport {
         Specifies the password of the system.
     .PARAMETER Credentials
         Specifies the credentials of the target system.
-    .PARAMETER AuthSource
-        Specifies the authentication source for target system.
     .PARAMETER Type
         Specifies the type of report that will be generated.
     .PARAMETER Format
@@ -87,7 +85,6 @@ function New-AsBuiltReport {
         [Parameter(Position = 2, Mandatory = $True, ParameterSetName = "UserPass", HelpMessage = 'Please provide the password to connect to the system')]
         [ValidateNotNullOrEmpty()]
         [String]$Password,
-        [String]$AuthSource,
         [Parameter(Position = 3, Mandatory = $False, ParameterSetName = "Credentials", HelpMessage = 'Please provide credentails to connect to the system')]
         [ValidateNotNullOrEmpty()]
         [System.Management.Automation.PSCredential]$Credentials,

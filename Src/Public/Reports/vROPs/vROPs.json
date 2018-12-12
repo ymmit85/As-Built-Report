@@ -4,5 +4,16 @@
         "Version": "1.0",
         "Status": "Released"
     },
-    "HealthCheck": {}
+    "Options": {
+        "AuthSource": "local"
+    },
+    "HealthCheck": {},
+    "InfoLevel": {
+        "_comment_": "0 = Disabled, 1 = Summary, 2 = Informative, 3 = Detailed, 4 = Adv Detailed, 5 = Comprehensive",
+        "Adapters": 3,
+        "Alerts": 3,
+        "SuperMetrics": 0,
+        "Roles": 2
+    }
+
 }

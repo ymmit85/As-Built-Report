@@ -298,7 +298,7 @@ function Get-ESXiBootDevice {
         }
 
         # Loop through all storage devices to identify boot device
-        $devices = $esxcli.storage.core.device.list.Invoke()
+        $devices = $esxcli.storage.core.device.list.Invoke() 
         $foundBootDevice = $false
         foreach ($device in $devices) {
             if ($device.IsBootDevice -eq $true) {

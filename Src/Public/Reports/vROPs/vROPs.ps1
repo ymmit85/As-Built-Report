@@ -24,17 +24,18 @@
 ###############################################################################################
 #                                    CONFIG SETTINGS                                          #
 ###############################################################################################
+write-host $InfoLevel.SuperMetrics
+if ($InfoLevel.SuperMetrics -gt 0) {write-host "pie" -ForegroundColor green}
 
 # If custom style not set, use vROPs style
 if (!$StyleName) {
-    .\Styles\VMware.ps1
+    & "$PSScriptRoot\..\..\Styles\VMware.ps1"
 }
-
 $Targets = $Target.split(",")
 foreach ($vropshost in $Targets) {
 
     # Connect to vROPs using supplied credentials 
-    $token = acquireToken -resthost $vropshost -authSource $authsource -username $username -password $password
+    $token = acquireToken -resthost $vropshost -authSource $options.authsource -username $username -password $password
     #endregion Configuration Settings
 
     #region Script Body
@@ -48,6 +49,23 @@ foreach ($vropshost in $Targets) {
             Section -Style Heading2 -Name 'AD Auth Sources' {
                 $AuthSources = $AuthSources | where {$_.sourcetype.name -like '*ACTIVE_DIRECTORY*'} | select-object @{l = 'Name'; e = {$_.name}}, @{l = 'ID'; e = {$_.ID}}
                 $AuthSources | Table -List -ColumnWidths 25, 75
+            }
+        }
+    }
+
+    Section -Style Heading1 -Name 'Roles' {
+        $roles = $(getRoles -resthost $vropshost -token $token).userRoles
+        if ($roles) {
+
+            Section -Style Heading2 -Name 'System Roles' {
+
+            $roleSystem = $roles | where {$_.'system-created' -like 'True'} |select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Display Name'; e = {$_.displayName}}   
+            $roleSystem | Table -List -ColumnWidths 25, 75
+            }
+
+            Section -Style Heading2 -Name 'Custom Roles' {
+                $roleSystem = $roles | where {$_.'system-created' -like 'False'} |select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Display Name'; e = {$_.displayName}} 
+                $roleSystem | Table -List -ColumnWidths 25, 75
             }
         }
     }
@@ -92,7 +110,7 @@ foreach ($vropshost in $Targets) {
         }
     }
 
-    Section -Style Heading1 -Name 'Adapters' {
+    <#Section -Style Heading1 -Name 'Adapters' {
         $AdapterInstance = $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto
         if ($AdapterInstance) {
             Section -Style Heading2 -Name 'Adapter Instances' {
@@ -100,9 +118,28 @@ foreach ($vropshost in $Targets) {
                 $AdapterInstance | Table -List -ColumnWidths 25, 75
             }
         }
-    }
+    }#>
 
-    $alerts = $(getAlertDefinitions -resthost $vropshost -token $token).alertDefinitions | where {$_.name -like '*'}
+    Section -Style Heading1 -Name 'Adapters' {
+        $AdapterInstance = $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto
+
+        if ($AdapterInstance) {
+            foreach ($r in $AdapterInstance.resourcekey.adapterKindKey) {
+                $e =  $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto | where {$_.resourcekey.adapterKindKey -like $r }
+                $rc = $collectors | where {$_.id -like $e.collectorId}
+            Section -Style Heading2 -Name "Adapter: $($r)" {
+                foreach ($f in $e) {
+                    $f = $f | select-object @{l = 'Name'; e = {$_.resourceKey.name}}, @{l = 'Resource Kind'; e = {$_.resourceKey.resourceKindKey}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Message from Adapter'; e = {$_.messageFromAdapterInstance}}, @{l = 'Collector Node'; e = {$rc.name}}
+                    $f | Table -List -ColumnWidths 25, 75
+                    BlankLine
+                }
+            }
+        }
+    }
+}
+
+
+    $alerts = $(getAlertDefinitions -resthost $vropshost -token $token).alertDefinitions | where {$_.name -like '*zzzzzzz*'}
     if ($alerts) {
         Section -Style Heading1 -Name 'Alerts' {
                 foreach ($a in $alerts){
@@ -228,15 +265,15 @@ foreach ($vropshost in $Targets) {
                     }
             }
         }
-    
-    Section -Style Heading1 -Name 'Super Metrics' {
-        $superMetrics = $(getSuperMetrics -resthost $vropshost -token $token).supermetrics
-        if ($superMetrics) {
-            $superMetrics = $superMetrics |  select-object @{l = 'Name'; e = {$_.name}}, @{l = 'ID'; e = {$_.ID}}, @{l = 'Formula'; e = {$_.formula}}
-            $superMetrics | Table -List -ColumnWidths 25, 75
+    if ($InfoLevel.SuperMetrics -ge 1) {
+            Section -Style Heading1 -Name 'Super Metrics' {
+            $superMetrics = $(getSuperMetrics -resthost $vropshost -token $token).supermetrics
+            if ($superMetrics) {
+                $superMetrics = $superMetrics |  select-object @{l = 'Name'; e = {$_.name}}, @{l = 'ID'; e = {$_.ID}}, @{l = 'Formula'; e = {$_.formula}}
+                $superMetrics | Table -List -ColumnWidths 25, 75
+            }
         }
     }
-
     Section -Style Heading1 -Name 'Service Status' {
         $serviceStatus = $(getServicesInfo -resthost $vropshost -token $token).service
         if ($serviceStatus) {
