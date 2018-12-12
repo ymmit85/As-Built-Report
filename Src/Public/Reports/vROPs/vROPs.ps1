@@ -42,71 +42,101 @@ foreach ($vropshost in $Targets) {
     ###############################################################################################
     #                                       SCRIPT BODY                                           #
     ###############################################################################################
-
-    Section -Style Heading1 -Name 'Authentication' {
-        $AuthSources = $(getAuthSources -resthost $vropshost -token $token).sources
-        if ($AuthSources) {
-            Section -Style Heading2 -Name 'AD Auth Sources' {
-                $AuthSources = $AuthSources | where {$_.sourcetype.name -like '*ACTIVE_DIRECTORY*'} | select-object @{l = 'Name'; e = {$_.name}}, @{l = 'ID'; e = {$_.ID}}
-                $AuthSources | Table -List -ColumnWidths 25, 75
+    if ($InfoLevel.Authentication -ge 1) {
+        Section -Style Heading1 -Name 'Authentication' {
+            $AuthSources = $(getAuthSources -resthost $vropshost -token $token).sources
+            if ($AuthSources) {
+                Section -Style Heading2 -Name 'AD Auth Sources' {
+                    $AuthSources = $AuthSources | where {$_.sourcetype.name -like '*ACTIVE_DIRECTORY*'} | select-object @{l = 'Name'; e = {$_.name}}, @{l = 'ID'; e = {$_.ID}}
+                    $AuthSources | Table -List -ColumnWidths 25, 75
+                }
             }
         }
     }
 
-    Section -Style Heading1 -Name 'Roles' {
-        $roles = $(getRoles -resthost $vropshost -token $token).userRoles
-        if ($roles) {
+    if ($InfoLevel.Roles -ge 1) {
+        Section -Style Heading1 -Name 'Roles' {
+            $roles = $(getRoles -resthost $vropshost -token $token).userRoles
+            if ($roles) {
 
-            Section -Style Heading2 -Name 'System Roles' {
-
-            $roleSystem = $roles | where {$_.'system-created' -like 'True'} |select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Display Name'; e = {$_.displayName}}   
-            $roleSystem | Table -List -ColumnWidths 25, 75
-            }
-
-            Section -Style Heading2 -Name 'Custom Roles' {
-                $roleSystem = $roles | where {$_.'system-created' -like 'False'} |select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Display Name'; e = {$_.displayName}} 
+                Section -Style Heading2 -Name 'System Roles' {
+                $roleSystem = $roles | where {$_.'system-created' -like 'True'} |select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Display Name'; e = {$_.displayName}}   
                 $roleSystem | Table -List -ColumnWidths 25, 75
+                }
+
+                Section -Style Heading2 -Name 'Custom Roles' {
+                    $roleSystem = $roles | where {$_.'system-created' -like 'False'} |select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Display Name'; e = {$_.displayName}} 
+                    $roleSystem | Table -List -ColumnWidths 25, 75
+                }
             }
         }
     }
 
-    Section -Style Heading1 -Name 'Remote Collectors' {
-        $collectors= $(getCollectors -resthost $vropshost -token $token).collector
-        $localNodes = $collectors  | where {$_.local -like '*True*'}
-        $remoteCollectors = $collectors  | where {$_.local -like '*False*'}
+    if ($InfoLevel.Users -ge 1) {
+        Section -Style Heading1 -Name 'User Accounts' {
+            $users = $(getUsers -resthost $vropshost -token $token).users
+            if ($users) {
+                
+                if ($InfoLevel.Users -ge 2) {
+                    Section -Style Heading2 -Name 'System Users' {
+                        $systemUsers = $users | where {$_.distinguishedName -like ''} | select-object @{l = 'Username'; e = {$_.username}}, @{l = 'First Name'; e = {$_.firstName}}, @{l = 'Last Name'; e = {$_.lastName}}, @{l = 'Enabled'; e = {$_.enabled}}
+                        $systemUsers | Table -List -ColumnWidths 25, 75
+                    }
+                }
 
-        if ($localNodes) {
-            Section -Style Heading2 -Name 'Local Nodes' {
-                $localNodes = $localNodes | sort-object ID | select-object @{l = 'Name'; e = {$_.name}},@{l = 'ID'; e = {$_.id}},  @{l = 'State'; e = {$_.State}}, @{l = 'Hostname'; e = {$_.hostname}}
-                $localNodes | Table -List -ColumnWidths 25, 75
-            }
-        }
-
-        if ($remoteCollectors) {
-            Section -Style Heading2 -Name 'Remote Collectors' {
-                $remoteCollectors = $remoteCollectors | sort-object ID | select-object @{l = 'Name'; e = {$_.name}},@{l = 'ID'; e = {$_.id}},  @{l = 'State'; e = {$_.State}}, @{l = 'Hostname'; e = {$_.hostname}}
-                $remoteCollectors | Table -List -ColumnWidths 25, 75
+                if ($InfoLevel.Users -ge 3) {
+                    Section -Style Heading2 -Name 'Imported Users' {
+                        $importedUsers = $users | where {$_.'distinguishedName' -notlike ''} | select-object @{l = 'Username'; e = {$_.username}}, @{l = 'First Name'; e = {$_.firstName}}, @{l = 'Last Name'; e = {$_.lastName}}, @{l = 'Distinguished Name'; e = {$_.distinguishedName}}, @{l = 'Enabled'; e = {$_.enabled}}
+                        $importedUsers | Table -List -ColumnWidths 25, 75
+                    }
+                }
             }
         }
     }
 
-    $collectorGroups= $(getCollectorGroups -resthost $vropshost -token $token).collectorGroups
-    if ($collectorGroups) {
-        Section -Style Heading2 -Name 'Remote Collector Groups' {
-            foreach ($rcGroup in $collectorGroups) {
-                Section -Style Heading3 -Name $($rcGroup).name {
-                    $Group = $rcGroup |  select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.Description}}
-                    $Group | Table -List -ColumnWidths 25, 75
 
-                    Section -Style Heading4 -Name "Group Members" {
-                        foreach ($rcId in $($rcGroup).collectorId) {
-                            $rcNames = $(getCollectors -resthost $vropshost -token $token).collector | where {$_.id -like $rcId}
-                            $rcNames = $rcNames | Select-Object @{l = 'Name'; e = {$_.name}},@{l = 'Hostname'; e = {$_.hostName}}
-                            $rcNames | Table -List -ColumnWidths 25, 75
+    if ($InfoLevel.RemoteCollectors -ge 1) {
+        Section -Style Heading1 -Name 'Remote Collectors' {
+            $collectors= $(getCollectors -resthost $vropshost -token $token).collector
+            $localNodes = $collectors  | where {$_.local -like '*True*'}
+            $remoteCollectors = $collectors  | where {$_.local -like '*False*'}
+
+            if ($localNodes) {
+                Section -Style Heading2 -Name 'Local Nodes' {
+                    $localNodes = $localNodes | sort-object ID | select-object @{l = 'Name'; e = {$_.name}},@{l = 'ID'; e = {$_.id}},  @{l = 'State'; e = {$_.State}}, @{l = 'Hostname'; e = {$_.hostname}}
+                    $localNodes | Table -List -ColumnWidths 25, 75
+                }
+            }
+
+            if ($remoteCollectors) {
+                Section -Style Heading2 -Name 'Remote Collectors' {
+                    $remoteCollectors = $remoteCollectors | sort-object ID | select-object @{l = 'Name'; e = {$_.name}},@{l = 'ID'; e = {$_.id}},  @{l = 'State'; e = {$_.State}}, @{l = 'Hostname'; e = {$_.hostname}}
+                    $remoteCollectors | Table -List -ColumnWidths 25, 75
+                }
+            }
+        }
+    }
+    if ($InfoLevel.RemoteCollectors -ge 2) {
+        $collectorGroups= $(getCollectorGroups -resthost $vropshost -token $token).collectorGroups
+        if ($collectorGroups) {
+            Section -Style Heading2 -Name 'Remote Collector Groups' {
+                foreach ($rcGroup in $collectorGroups) {
+                    Section -Style Heading3 -Name $($rcGroup).name {
+                        $Group = $rcGroup |  select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.Description}}
+                        $Group | Table -List -ColumnWidths 25, 75
+
+                        if ($InfoLevel.CollectorGroups -ge 2) {
+                            Section -Style Heading4 -Name "Group Members" {
+                                foreach ($rcId in $($rcGroup).collectorId) {
+                                    $rcNames = $(getCollectors -resthost $vropshost -token $token).collector | where {$_.id -like $rcId}
+                                    $rcNames = $rcNames | Select-Object @{l = 'Name'; e = {$_.name}},@{l = 'Hostname'; e = {$_.hostName}}
+                                    $rcNames | Table -List -ColumnWidths 25, 75
+                                }
+                            }
                         }
                     }
                 }
-            }         
+            }
         }
     }
 
@@ -119,33 +149,35 @@ foreach ($vropshost in $Targets) {
             }
         }
     }#>
-
-    Section -Style Heading1 -Name 'Adapters' {
-        $AdapterInstance = $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto
-
-        if ($AdapterInstance) {
-            foreach ($r in $AdapterInstance.resourcekey.adapterKindKey) {
-                $e =  $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto | where {$_.resourcekey.adapterKindKey -like $r }
-                $rc = $collectors | where {$_.id -like $e.collectorId}
-            Section -Style Heading2 -Name "Adapter: $($r)" {
-                foreach ($f in $e) {
-                    $f = $f | select-object @{l = 'Name'; e = {$_.resourceKey.name}}, @{l = 'Resource Kind'; e = {$_.resourceKey.resourceKindKey}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Message from Adapter'; e = {$_.messageFromAdapterInstance}}, @{l = 'Collector Node'; e = {$rc.name}}
-                    $f | Table -List -ColumnWidths 25, 75
-                    BlankLine
+    if ($InfoLevel.Adapters -ge 1) {
+        Section -Style Heading1 -Name 'Adapters' {
+            $AdapterInstance = $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto
+            if ($AdapterInstance) {
+                foreach ($r in $AdapterInstance.resourcekey.adapterKindKey) {
+                    $e =  $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto | where {$_.resourcekey.adapterKindKey -like $r }
+                    $rc = $collectors | where {$_.id -like $e.collectorId}
+                    Section -Style Heading2 -Name "Adapter: $($r)" {
+                        foreach ($f in $e) {
+                            $f = $f | select-object @{l = 'Name'; e = {$_.resourceKey.name}}, @{l = 'Resource Kind'; e = {$_.resourceKey.resourceKindKey}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Message from Adapter'; e = {$_.messageFromAdapterInstance}}, @{l = 'Collector Node'; e = {$rc.name}}
+                            $f | Table -List -ColumnWidths 25, 75
+                            BlankLine
+                        }
+                    }
                 }
             }
         }
     }
-}
 
-
-    $alerts = $(getAlertDefinitions -resthost $vropshost -token $token).alertDefinitions | where {$_.name -like '*zzzzzzz*'}
+if ($InfoLevel.Alerts -ge 1) {
+    $alerts = $(getAlertDefinitions -resthost $vropshost -token $token).alertDefinitions | where {$_.name -like '*Datastore*'}
     if ($alerts) {
         Section -Style Heading1 -Name 'Alerts' {
                 foreach ($a in $alerts){
                     Section -Style Heading2 -Name $a.name {
                         $alertDetail = $a | select-object @{l = 'Name'; e = {$_.name}},@{l = 'ID'; e = {$_.id}},@{l = 'description'; e = {$_.description}},@{l = 'adapterKindKey'; e = {$_.adapterKindKey}},@{l = 'resourceKindKey'; e = {$_.resourceKindKey}},@{l = 'waitCycles'; e = {$_.waitCycles}},@{l = 'cancelCycles'; e = {$_.cancelCycles}}
                         $alertDetail | Table -List -ColumnWidths 25, 75
+                        if ($InfoLevel.Alerts -ge 2) {
+
                         $symp = $a.states.'base-symptom-set'.symptomDefinitionIds
                         foreach ($s in $symp) {
                             $sympHashTable = @()
@@ -261,10 +293,13 @@ foreach ($vropshost in $Targets) {
                                 }
                             }
                         }
+                    }
                         }
                     }
             }
         }
+    }
+
     if ($InfoLevel.SuperMetrics -ge 1) {
             Section -Style Heading1 -Name 'Super Metrics' {
             $superMetrics = $(getSuperMetrics -resthost $vropshost -token $token).supermetrics
@@ -274,19 +309,24 @@ foreach ($vropshost in $Targets) {
             }
         }
     }
-    Section -Style Heading1 -Name 'Service Status' {
-        $serviceStatus = $(getServicesInfo -resthost $vropshost -token $token).service
-        if ($serviceStatus) {
-            $serviceStatus = $serviceStatus |  select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Health'; e = {$_.Health}}, @{l = 'Details'; e = {$_.details}}
-            $serviceStatus | Table -List -ColumnWidths 25, 75
+
+    if ($InfoLevel.ServiceStatus -ge 1) {
+        Section -Style Heading1 -Name 'Service Status' {
+            $serviceStatus = $(getServicesInfo -resthost $vropshost -token $token).service
+            if ($serviceStatus) {
+                $serviceStatus = $serviceStatus |  select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Health'; e = {$_.Health}}, @{l = 'Details'; e = {$_.details}}
+                $serviceStatus | Table -List -ColumnWidths 25, 75
+            }
         }
     }
 
-    Section -Style Heading1 -Name 'Custom Groups' {
-        $customGroups = $(getCustomGroups -resthost $vropshost -token $token).values.resourceKey
-        if ($customGroups) {
-            $customGroups = $customGroups |  select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Adapter Kind'; e = {$_.adapterKindKey}}, @{l = 'Resource Kind'; e = {$_.resourceKindKey}}
-            $customGroups | Table -List -ColumnWidths 25, 75
+    if ($InfoLevel.CustomGroups -ge 1) {
+        Section -Style Heading1 -Name 'Custom Groups' {
+            $customGroups = $(getCustomGroups -resthost $vropshost -token $token).values.resourceKey
+            if ($customGroups) {
+                $customGroups = $customGroups |  select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Adapter Kind'; e = {$_.adapterKindKey}}, @{l = 'Resource Kind'; e = {$_.resourceKindKey}}
+                $customGroups | Table -List -ColumnWidths 25, 75
+            }
         }
     }
     #endregion Script Body
