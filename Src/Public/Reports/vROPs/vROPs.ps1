@@ -24,24 +24,26 @@
 ###############################################################################################
 #                                    CONFIG SETTINGS                                          #
 ###############################################################################################
-write-host $InfoLevel.SuperMetrics
-if ($InfoLevel.SuperMetrics -gt 0) {write-host "pie" -ForegroundColor green}
 
 # If custom style not set, use vROPs style
 if (!$StyleName) {
     & "$PSScriptRoot\..\..\Styles\VMware.ps1"
 }
-$Targets = $Target.split(",")
-foreach ($vropshost in $Targets) {
 
-    # Connect to vROPs using supplied credentials 
-    $token = acquireToken -resthost $vropshost -authSource $options.authsource -username $username -password $password
+
+    # Connect to vROPs using supplied credentials
+    foreach ($vropshost in $Target) {
+    $token = acquireToken -resthost $vropshost -username $username -password $password -authSource $options.authsource
+    
     #endregion Configuration Settings
 
     #region Script Body
     ###############################################################################################
     #                                       SCRIPT BODY                                           #
     ###############################################################################################
+
+######Authentication
+
     if ($InfoLevel.Authentication -ge 1) {
         Section -Style Heading1 -Name 'Authentication' {
             $AuthSources = $(getAuthSources -resthost $vropshost -token $token).sources
@@ -71,30 +73,66 @@ foreach ($vropshost in $Targets) {
             }
         }
     }
+    if ($InfoLevel.Groups -ge 1) {
+        $users = $(getUsers -resthost $vropshost -token $token).users
+        $groups = $(getUserGroups -resthost $vropshost -token $token).userGroups
 
-    if ($InfoLevel.Users -ge 1) {
-        Section -Style Heading1 -Name 'User Accounts' {
-            $users = $(getUsers -resthost $vropshost -token $token).users
-            if ($users) {
-                
-                if ($InfoLevel.Users -ge 2) {
-                    Section -Style Heading2 -Name 'System Users' {
-                        $systemUsers = $users | where {$_.distinguishedName -like ''} | select-object @{l = 'Username'; e = {$_.username}}, @{l = 'First Name'; e = {$_.firstName}}, @{l = 'Last Name'; e = {$_.lastName}}, @{l = 'Enabled'; e = {$_.enabled}}
-                        $systemUsers | Table -List -ColumnWidths 25, 75
+        Section -Style Heading1 -Name 'Groups' {
+            if ($groups) {
+                foreach ($g in ($groups | where {!($_.authSourceId)})) {
+                    Section -Style Heading2 -Name 'System Groups' {
+                        $groupsSystem = $g  |select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.description}}
+                        $groupsSystem | Table -List -ColumnWidths 25, 75
                     }
-                }
+                    if ($InfoLevel.Groups -ge 2) {
+                        Section -Style Heading3 -Name 'Users in Group' {
+                            $usersInGroup = @()
+                            foreach ($c in $g.userIds) {
+                                $usersInGroup = $users | where {$_.id -eq $c} | select-object @{l = 'Username'; e = {$_.username}}, @{l = 'First Name'; e = {$_.firstName}}, @{l = 'Last Name'; e = {$_.lastName}}, @{l = 'Distinguished Name'; e = {$_.distinguishedName}}
+                                $usersInGroup | Table -List -ColumnWidths 25, 75
+                                BlankLine
+                            }
+                        }
+                    }
+                } 
 
-                if ($InfoLevel.Users -ge 3) {
-                    Section -Style Heading2 -Name 'Imported Users' {
-                        $importedUsers = $users | where {$_.'distinguishedName' -notlike ''} | select-object @{l = 'Username'; e = {$_.username}}, @{l = 'First Name'; e = {$_.firstName}}, @{l = 'Last Name'; e = {$_.lastName}}, @{l = 'Distinguished Name'; e = {$_.distinguishedName}}, @{l = 'Enabled'; e = {$_.enabled}}
-                        $importedUsers | Table -List -ColumnWidths 25, 75
+                foreach ($g in $groups | where {$_.authSourceId}) {
+                    Section -Style Heading2 -Name 'Imported Groups' {
+                        $groupsImported = $g | where {$_.authSourceId} |select-object @{l = 'Name'; e = {$_.name}}, @{l = 'Description'; e = {$_.description}}
+                        $groupsImported | Table -List -ColumnWidths 25, 75
                     }
+                        if ($InfoLevel.Groups -ge 2) { 
+                            Section -Style Heading3 -Name 'Users in Group' {
+                                $usersInGroup = @()
+                                foreach ($c in $g.userIds) {
+                                    $usersInGroup = $users | where {$_.id -eq $c} | select-object @{l = 'Username'; e = {$_.username}}, @{l = 'First Name'; e = {$_.firstName}}, @{l = 'Last Name'; e = {$_.lastName}}#, @{l = 'Distinguished Name'; e = {$_.distinguishedName}}
+                                    $usersInGroup | Table -List -ColumnWidths 25, 75
+                                    BlankLine
+                                }
+                            }
+                        }
                 }
             }
         }
     }
 
+    if ($InfoLevel.Users -ge 1) {
+        Section -Style Heading1 -Name 'User Accounts' {
+            if ($users) {
+                Section -Style Heading2 -Name 'System Users' {
+                    $systemUsers = $users | where {$_.distinguishedName -like ''} | select-object @{l = 'Username'; e = {$_.username}}, @{l = 'First Name'; e = {$_.firstName}}, @{l = 'Last Name'; e = {$_.lastName}}, @{l = 'Enabled'; e = {$_.enabled}}, @{l = 'Roles'; e = {$($_.rolenames) -join ', '}}
+                    $systemUsers | Table -List -ColumnWidths 25, 75
+                }
 
+                Section -Style Heading2 -Name 'Imported Users' {
+                    $importedUsers = $users | where {$_.'distinguishedName' -notlike ''} | select-object @{l = 'Username'; e = {$_.username}}, @{l = 'First Name'; e = {$_.firstName}}, @{l = 'Last Name'; e = {$_.lastName}}, @{l = 'Distinguished Name'; e = {$_.distinguishedName}}, @{l = 'Enabled'; e = {$_.enabled}}
+                    $importedUsers | Table -List -ColumnWidths 25, 75
+                }
+            }
+        }
+    }
+
+##### Remote Collectors
     if ($InfoLevel.RemoteCollectors -ge 1) {
         Section -Style Heading1 -Name 'Remote Collectors' {
             $collectors= $(getCollectors -resthost $vropshost -token $token).collector
@@ -140,15 +178,6 @@ foreach ($vropshost in $Targets) {
         }
     }
 
-    <#Section -Style Heading1 -Name 'Adapters' {
-        $AdapterInstance = $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto
-        if ($AdapterInstance) {
-            Section -Style Heading2 -Name 'Adapter Instances' {
-                $AdapterInstance = $AdapterInstance | Sort-object adapterKindKey | select-object @{l = 'Name'; e = {$_.resourceKey.name}}, @{l = 'Description'; e = {$_.description}}, @{l = 'Message'; e = {$_.messageFromAdapterInstance}}, @{l = 'Adapter Kind'; e = {$_.resourceKey.adapterKindKey}}, @{l = 'Resource Kind'; e = {$_.resourceKey.resourceKindKey}}
-                $AdapterInstance | Table -List -ColumnWidths 25, 75
-            }
-        }
-    }#>
     if ($InfoLevel.Adapters -ge 1) {
         Section -Style Heading1 -Name 'Adapters' {
             $AdapterInstance = $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto
@@ -169,7 +198,7 @@ foreach ($vropshost in $Targets) {
     }
 
 if ($InfoLevel.Alerts -ge 1) {
-    $alerts = $(getAlertDefinitions -resthost $vropshost -token $token).alertDefinitions | where {$_.name -like '*Datastore*'}
+    $alerts = $(getAlertDefinitions -resthost $vropshost -token $token).alertDefinitions | where {$_.name -like "*$($Options.AlertFilter)*"}
     if ($alerts) {
         Section -Style Heading1 -Name 'Alerts' {
                 foreach ($a in $alerts){
@@ -178,30 +207,13 @@ if ($InfoLevel.Alerts -ge 1) {
                         $alertDetail | Table -List -ColumnWidths 25, 75
                         if ($InfoLevel.Alerts -ge 2) {
 
-                        $symp = $a.states.'base-symptom-set'.symptomDefinitionIds
-                        foreach ($s in $symp) {
-                            $sympHashTable = @()
-                            $symDef = $(getSymptomDefinitions -resthost $vropshost -token $token -symptomdefinitionid $s).symptomDefinitions
-                            if ($symDef.state.condition.type -contains 'CONDITION_MESSAGE_EVENT' ) {
-                                Section -Style Heading3 -Name "Symptom: $($symDef.name)" {
+                            $symp = $a.states.'base-symptom-set'.symptomDefinitionIds
+                            foreach ($s in $symp) {
+                                $sympHashTable = @()
+                                $symDef = $(getSymptomDefinitions -resthost $vropshost -token $token -symptomdefinitionid $s).symptomDefinitions
+                                if ($symDef.state.condition.type -contains 'CONDITION_MESSAGE_EVENT' ) {
+                                    Section -Style Heading3 -Name "Symptom: $($symDef.name)" {
 
-                                $sympHashTable += [PSCustomObject]@{
-                                    'Name' = $symDef.name
-                                    'Id' = $symDef.Id
-                                    'adapterKindKey' = $symDef.adapterKindKey
-                                    'resourceKindKey' = $symDef.resourceKindKey
-                                    'Wait Cycles' = $symDef.waitCycles
-                                    'cancelCycles' = $symDef.cancelCycles
-                                    'type' = $symDef.state.condition.type
-                                    'eventType' = $symDef.state.condition.eventType
-                                    'message' = $symDef.state.condition.message
-                                    'operator' = $symDef.state.condition.operator
-                                }
-                                $sympHashTable | Table -List -ColumnWidths 25, 75
-                                }
-                            } elseif ($symDef.state.condition.type -contains 'CONDITION_HT' ) {
-
-                                Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
                                     $sympHashTable += [PSCustomObject]@{
                                         'Name' = $symDef.name
                                         'Id' = $symDef.Id
@@ -209,93 +221,110 @@ if ($InfoLevel.Alerts -ge 1) {
                                         'resourceKindKey' = $symDef.resourceKindKey
                                         'Wait Cycles' = $symDef.waitCycles
                                         'cancelCycles' = $symDef.cancelCycles
-                                        'severity' = $symDef.state.severity
                                         'type' = $symDef.state.condition.type
-                                        'key' = $symDef.state.condition.key
+                                        'eventType' = $symDef.state.condition.eventType
+                                        'message' = $symDef.state.condition.message
                                         'operator' = $symDef.state.condition.operator
-                                        'value' = $symDef.state.condition.value
-                                        'valueType' = $symDef.state.condition.valueType
-                                        'instanced' = $symDef.state.condition.instanced
-                                        'thresholdType' = $symDef.state.condition.thresholdType
                                     }
-                                        $sympHashTable | Table -List -ColumnWidths 25, 75
-                                } 
-                            }   elseif ($symDef.state.condition.type -contains 'CONDITION_PROPERTY_STRING' ) {
-
-                                Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
-                                    $sympHashTable += [PSCustomObject]@{
-                                        'Name' = $symDef.name
-                                        'Id' = $symDef.Id
-                                        'adapterKindKey' = $symDef.adapterKindKey
-                                        'resourceKindKey' = $symDef.resourceKindKey
-                                        'Wait Cycles' = $symDef.waitCycles
-                                        'cancelCycles' = $symDef.cancelCycles
-                                        'severity' = $symDef.state.severity
-                                        'type' = $symDef.state.condition.type
-                                        'stringValue' = $symDef.state.condition.stringValue
-                                        'key' = $symDef.state.condition.key
-                                        'operator' = $symDef.state.condition.operator
-                                        'thresholdType' = $symDef.state.condition.thresholdType
-                                    }
-                                        $sympHashTable | Table -List -ColumnWidths 25, 75
-                                }
-                            } elseif ($symDef.state.condition.type -contains 'CONDITION_FAULT' ) {
-
-                                Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
-                                    $sympHashTable += [PSCustomObject]@{
-                                        'Name' = $symDef.name
-                                        'Id' = $symDef.Id
-                                        'adapterKindKey' = $symDef.adapterKindKey
-                                        'resourceKindKey' = $symDef.resourceKindKey
-                                        'Wait Cycles' = $symDef.waitCycles
-                                        'cancelCycles' = $symDef.cancelCycles
-                                        'severity' = $symDef.state.severity
-                                        'type' = $symDef.state.condition.type
-                                        'faultKey' = $symDef.state.condition.faultKey
-                                        #'faultEvents' = $symDef.state.condition.faultEvents
-                                    }
-                                        $sympHashTable | Table -List -ColumnWidths 25, 75
-                                }
-                            } elseif ($symDef.state.condition.type -contains 'CONDITION_PROPERTY_NUMERIC' ) {
-
-                                Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
-                                    $sympHashTable += [PSCustomObject]@{
-                                        'Name' = $symDef.name
-                                        'Id' = $symDef.Id
-                                        'adapterKindKey' = $symDef.adapterKindKey
-                                        'resourceKindKey' = $symDef.resourceKindKey
-                                        'Wait Cycles' = $symDef.waitCycles
-                                        'cancelCycles' = $symDef.cancelCycles
-                                        'severity' = $symDef.state.severity
-                                        'type' = $symDef.state.condition.type
-                                        'value' = $symDef.state.condition.value
-                                        'operator' = $symDef.state.condition.operator
-                                        'key' = $symDef.state.condition.key
-                                        'thresholdType' = $symDef.state.condition.thresholdType
-                                    }
-                                        $sympHashTable | Set-Style -Style Warning
-
-                                }
-                            } else {
-
-                                Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
-                                    $sympHashTable += [PSCustomObject]@{
-                                        'Name' = $symDef.name
-                                        'Id' = $symDef.Id
-                                        'adapterKindKey' = $symDef.adapterKindKey
-                                        'resourceKindKey' = $symDef.resourceKindKey
-                                        'Wait Cycles' = $symDef.waitCycles
-                                        'cancelCycles' = $symDef.cancelCycles
-                                        'type' = $symDef.state.condition.type
-
-                                    } 
                                     $sympHashTable | Table -List -ColumnWidths 25, 75
+                                    }
+                                } elseif ($symDef.state.condition.type -contains 'CONDITION_HT' ) {
+
+                                    Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
+                                        $sympHashTable += [PSCustomObject]@{
+                                            'Name' = $symDef.name
+                                            'Id' = $symDef.Id
+                                            'adapterKindKey' = $symDef.adapterKindKey
+                                            'resourceKindKey' = $symDef.resourceKindKey
+                                            'Wait Cycles' = $symDef.waitCycles
+                                            'cancelCycles' = $symDef.cancelCycles
+                                            'severity' = $symDef.state.severity
+                                            'type' = $symDef.state.condition.type
+                                            'key' = $symDef.state.condition.key
+                                            'operator' = $symDef.state.condition.operator
+                                            'value' = $symDef.state.condition.value
+                                            'valueType' = $symDef.state.condition.valueType
+                                            'instanced' = $symDef.state.condition.instanced
+                                            'thresholdType' = $symDef.state.condition.thresholdType
+                                        }
+                                            $sympHashTable | Table -List -ColumnWidths 25, 75
+                                    } 
+                                }   elseif ($symDef.state.condition.type -contains 'CONDITION_PROPERTY_STRING' ) {
+
+                                    Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
+                                        $sympHashTable += [PSCustomObject]@{
+                                            'Name' = $symDef.name
+                                            'Id' = $symDef.Id
+                                            'adapterKindKey' = $symDef.adapterKindKey
+                                            'resourceKindKey' = $symDef.resourceKindKey
+                                            'Wait Cycles' = $symDef.waitCycles
+                                            'cancelCycles' = $symDef.cancelCycles
+                                            'severity' = $symDef.state.severity
+                                            'type' = $symDef.state.condition.type
+                                            'stringValue' = $symDef.state.condition.stringValue
+                                            'key' = $symDef.state.condition.key
+                                            'operator' = $symDef.state.condition.operator
+                                            'thresholdType' = $symDef.state.condition.thresholdType
+                                        }
+                                            $sympHashTable | Table -List -ColumnWidths 25, 75
+                                    }
+                                } elseif ($symDef.state.condition.type -contains 'CONDITION_FAULT' ) {
+
+                                    Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
+                                        $sympHashTable += [PSCustomObject]@{
+                                            'Name' = $symDef.name
+                                            'Id' = $symDef.Id
+                                            'adapterKindKey' = $symDef.adapterKindKey
+                                            'resourceKindKey' = $symDef.resourceKindKey
+                                            'Wait Cycles' = $symDef.waitCycles
+                                            'cancelCycles' = $symDef.cancelCycles
+                                            'severity' = $symDef.state.severity
+                                            'type' = $symDef.state.condition.type
+                                            'faultKey' = $symDef.state.condition.faultKey
+                                            #'faultEvents' = $symDef.state.condition.faultEvents
+                                        }
+                                            $sympHashTable | Table -List -ColumnWidths 25, 75
+                                    }
+                                } elseif ($symDef.state.condition.type -contains 'CONDITION_PROPERTY_NUMERIC' ) {
+
+                                    Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
+                                        $sympHashTable += [PSCustomObject]@{
+                                            'Name' = $symDef.name
+                                            'Id' = $symDef.Id
+                                            'adapterKindKey' = $symDef.adapterKindKey
+                                            'resourceKindKey' = $symDef.resourceKindKey
+                                            'Wait Cycles' = $symDef.waitCycles
+                                            'cancelCycles' = $symDef.cancelCycles
+                                            'severity' = $symDef.state.severity
+                                            'type' = $symDef.state.condition.type
+                                            'value' = $symDef.state.condition.value
+                                            'operator' = $symDef.state.condition.operator
+                                            'key' = $symDef.state.condition.key
+                                            'thresholdType' = $symDef.state.condition.thresholdType
+                                        }
+                                            $sympHashTable | Set-Style -Style Warning
+
+                                    }
+                                } else {
+
+                                    Section -Style Heading4 -Name "Symptom: $($symDef.name)" {
+                                        $sympHashTable += [PSCustomObject]@{
+                                            'Name' = $symDef.name
+                                            'Id' = $symDef.Id
+                                            'adapterKindKey' = $symDef.adapterKindKey
+                                            'resourceKindKey' = $symDef.resourceKindKey
+                                            'Wait Cycles' = $symDef.waitCycles
+                                            'cancelCycles' = $symDef.cancelCycles
+                                            'type' = $symDef.state.condition.type
+
+                                        } 
+                                        $sympHashTable | Table -List -ColumnWidths 25, 75
+                                    }
                                 }
                             }
                         }
                     }
-                        }
-                    }
+                }
             }
         }
     }
