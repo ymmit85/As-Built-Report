@@ -6,12 +6,11 @@
     },
     "Options": {
         "AuthSource": "local",
-        "AlertFilter": ""
+        "AlertFilter": "*"
     },
     "HealthCheck": {},
     "InfoLevel": {
         "_comment_": "0 = Disabled, 1 = Summary, 2 = Informative, 3 = Detailed, 4 = Adv Detailed, 5 = Comprehensive",
-        "Adapters": 2,
         "Authentication": 2,
         "Roles": 2,
         "Groups": 2,
@@ -23,5 +22,4 @@
         "ServiceStatus": 2,
         "CustomGroups": 2
     }
-
 }

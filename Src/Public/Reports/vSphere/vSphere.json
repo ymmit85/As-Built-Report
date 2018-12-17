@@ -9,22 +9,22 @@
     },
     "InfoLevel": {
         "_comment_": "0 = Disabled, 1 = Summary, 2 = Informative, 3 = Detailed, 4 = Adv Detailed, 5 = Comprehensive",
-        "vCenter": 3,
-        "Cluster": 3,
-        "ResourcePool": 3,
-        "VMhost": 3,
-        "Network": 3,
-        "Vsan": 3,
+        "vCenter": 2,
+        "Cluster": 2,
+        "ResourcePool": 2,
+        "VMhost": 2,
+        "Network": 2,
+        "Vsan": 2,
         "Datastore": 3,
         "DSCluster": 3,
-        "VM": 3,
-        "VUM": 3,
+        "VM": 1,
+        "VUM": 0,
         "NSX": 0,
         "SRM": 0
     },
     "HealthCheck": {
         "vCenter": {
-            "Mail": true,
+            "Mail": false,
             "Licensing": true
         },
         "Cluster": {
