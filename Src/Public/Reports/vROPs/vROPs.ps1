@@ -190,7 +190,7 @@ if (!$StyleName) {
 
     if ($InfoLevel.Adapters -ge 1) {
         Section -Style Heading1 -Name 'Adapters' {
-            $AdapterInstance = $(getAdapterInstance -resthost $vropshost -token $token).adapterInstancesInfoDto 
+            $AdapterInstance = $(getAdapterInstances -resthost $vropshost -token $token).adapterInstancesInfoDto 
             $collectors= $(getCollectors -resthost $vropshost -token $token).collector
             if ($AdapterInstance) {
                 foreach ($adapterKind in $AdapterInstance.resourcekey.adapterKindKey | sort -Unique) {
