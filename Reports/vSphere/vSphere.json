@@ -5,7 +5,8 @@
         "Status": "Released"
     },
     "Options": {
-        "ShowLicenses": false
+        "ShowLicenses": false,
+        "ShowDriversFirmware": true
     },
     "InfoLevel": {
         "_comment_": "0 = Disabled, 1 = Summary, 2 = Informative, 3 = Detailed, 4 = Adv Detailed, 5 = Comprehensive",
@@ -30,11 +31,17 @@
         "Cluster": {
             "HAEnabled": true,
             "HAAdmissionControl": true,
+            "HostMonitoring": true,
+            "DatastoreOnPDL": true,
+            "DatastoreOnAPD": true,
+            "APDTimeOut": true,
+            "vmMonitoring": true,
             "DRSEnabled": true,
             "DRSAutomationLevel": true,
-            "DRSAutomationLevelSetting": "FullyAutomated",
+            "DRSAutomationLevelSetting": "Fully Automated",
             "DRSVMHostRules": true,
             "DRSRules": true,
+            "VsanEnabled": false,
             "EVCEnabled": true,
             "VUMCompliance": true
         },
@@ -55,15 +62,16 @@
         "DSCluster": {
             "CapacityUtilization": true,
             "SDRSAutomationLevel": true,
-            "SDRSAutomationLevelSetting": "FullyAutomated"
+            "SDRSAutomationLevelSetting": "Fully Automated"
         },
         "VM": {
             "PowerState": true,
-            "PowerStateSetting": "PoweredOn",
+            "PowerStateSetting": "Powered On",
             "CpuHotAddEnabled": true,
             "CpuHotRemoveEnabled": true,
             "MemoryHotAddEnabled": true,
             "ChangeBlockTrackingEnabled": true,
+            "SpbmPolicyCompliance": true,
             "VMTools": true,
             "VMSnapshots": true
         }
